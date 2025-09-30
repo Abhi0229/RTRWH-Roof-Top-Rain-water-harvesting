@@ -196,9 +196,9 @@ const InputPage = () => {
         <h2 className="text-3xl font-bold text-gray-800 mb-6">Enter Rooftop Details</h2>
 
         <div className="mb-6 border-b border-gray-300">
-          <nav className="flex">
+          <nav className="flex gap-3">
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-5 py-3 text-base rounded-lg font-medium ${
                 activeTab === 'map'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-500'
@@ -208,7 +208,7 @@ const InputPage = () => {
               Draw on Map
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-5 py-3 text-base rounded-lg font-medium ${
                 activeTab === 'form'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-500'
