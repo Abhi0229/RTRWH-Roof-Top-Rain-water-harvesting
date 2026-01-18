@@ -1,0 +1,14 @@
+# Emergency Fix for Railway Deployment
+
+# Run these commands to fix the deployment:
+
+git add .
+git commit -m "Emergency fix: Simplify Railway deployment - remove static files, add health endpoint"
+git push origin main
+
+# What this fixes:
+# - Removes complex static file serving that was causing errors
+# - Adds dedicated /health endpoint for Railway health checks
+# - Simplifies Dockerfile to focus only on backend API
+# - Updates railway.json to use /health endpoint
+# - Removes potential routing conflicts
