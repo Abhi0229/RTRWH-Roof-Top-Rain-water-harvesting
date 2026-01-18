@@ -1,0 +1,15 @@
+# Git Commands to Fix Railway Deployment Issues
+
+# 1. Add the fixes
+git add .
+
+# 2. Commit the fixes
+git commit -m "Fix Railway deployment issues
+
+- Update run.py to use PORT environment variable and disable reload in production
+- Fix Dockerfile health check timing and add curl dependency
+- Update railway.json health check timeout
+- Fix database path for production environment"
+
+# 3. Push to trigger Railway redeploy
+git push origin main

@@ -1,0 +1,24 @@
+# Git Commands to Commit RTRWH Changes
+
+# 1. Check current status
+git status
+
+# 2. Add all changes
+git add .
+
+# 3. Commit with message
+git commit -m "Add comprehensive deployment configurations for Railway, Vercel, Docker, and GitHub Actions
+
+- Add vercel.json for Vercel deployment
+- Add Dockerfile for containerization  
+- Add railway.json for Railway deployment
+- Add GitHub Actions workflow for CI/CD
+- Add deployment guides and scripts
+- Update backend/main.py for production static file serving
+- Add environment variables template"
+
+# 4. Push to remote repository
+git push origin main
+
+# If main branch doesn't exist, try master:
+# git push origin master

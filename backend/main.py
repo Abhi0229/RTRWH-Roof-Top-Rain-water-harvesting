@@ -1,11 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import requests
 import database
 from schemas import AssessmentInput, AssessmentResult
+import os
 
 app = FastAPI(title="RTRWH Backend API")
+
+# Serve static files in production
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Allow CORS for frontend
 app.add_middleware(
@@ -95,3 +102,19 @@ async def assess_rooftop(data: AssessmentInput):
 @app.get("/stats")
 def get_statistics():
     return database.get_stats()
+
+# Serve frontend in production
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if os.path.exists("static") and not full_path.startswith("api"):
+        if full_path == "" or full_path == "/":
+            return FileResponse("static/index.html")
+        
+        file_path = f"static/{full_path}"
+        if os.path.exists(file_path):
+            return FileResponse(file_path)
+        else:
+            # Return index.html for client-side routing
+            return FileResponse("static/index.html")
+    
+    return {"message": "API endpoint not found"}

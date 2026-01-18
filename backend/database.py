@@ -1,7 +1,9 @@
 import sqlite3
 import os
 
-DATABASE_PATH = "rtrwh.db"
+# Use data directory for production, current directory for development
+DATABASE_DIR = "/app/data" if os.path.exists("/app/data") else "."
+DATABASE_PATH = os.path.join(DATABASE_DIR, "rtrwh.db")
 
 def init_db():
     conn = sqlite3.connect(DATABASE_PATH)
