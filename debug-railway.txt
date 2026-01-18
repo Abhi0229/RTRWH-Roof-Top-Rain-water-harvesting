@@ -1,0 +1,15 @@
+# Debug Railway Deployment
+
+# Test these URLs to debug:
+
+1. API Status: https://rtrwh-roof-top-rain-water-harvesting-production.up.railway.app/api
+2. Health Check: https://rtrwh-roof-top-rain-water-harvesting-production.up.railway.app/health
+3. API Docs: https://rtrwh-roof-top-rain-water-harvesting-production.up.railway.app/docs
+
+# If these work but frontend doesn't, the issue is with React build/serving
+# If these don't work, the issue is with the backend deployment
+
+# Check Railway logs for:
+# - "Frontend not built" message
+# - "static/index.html not found" message
+# - Build errors during frontend compilation

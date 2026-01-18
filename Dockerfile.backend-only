@@ -1,4 +1,4 @@
-# Simple Railway deployment with pre-built frontend
+# Backend-only Railway deployment for debugging
 FROM python:3.11-slim
 
 # Set working directory
@@ -13,14 +13,11 @@ RUN apt-get update && apt-get install -y \
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code (including pre-built static files)
+# Copy backend code
 COPY backend/ ./
 
 # Create database directory
 RUN mkdir -p /app/data
-
-# Verify static files exist
-RUN ls -la static/ || echo "No static directory found"
 
 # Expose port
 EXPOSE 8000

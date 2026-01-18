@@ -147,14 +147,36 @@ def get_statistics():
 # Serve React frontend for all other routes
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
+    # Don't serve frontend for API routes
+    if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("health"):
+        return {"error": "Not found"}
+    
     if os.path.exists("static"):
-        # If it's a file request, serve it directly
-        if "." in full_path and not full_path.startswith("api"):
+        # If it's a static file request (has extension), serve it directly
+        if "." in full_path:
             file_path = f"static/{full_path}"
             if os.path.exists(file_path):
                 return FileResponse(file_path)
         
-        # For all other routes (including root), serve index.html for React routing
-        return FileResponse("static/index.html")
+        # For all other routes (React routing), serve index.html
+        index_path = "static/index.html"
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        else:
+            return {"error": "Frontend not built", "message": "static/index.html not found"}
     
-    return {"message": "Frontend not available"}
+    return {"error": "Static directory not found", "message": "Frontend not available"}
+
+# Root route specifically for React app
+@app.get("/")
+async def serve_root():
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    else:
+        return {
+            "message": "RTRWH Assessment API - Production", 
+            "status": "online",
+            "version": "1.0.0",
+            "frontend": "not available",
+            "api_docs": "/docs"
+        }
