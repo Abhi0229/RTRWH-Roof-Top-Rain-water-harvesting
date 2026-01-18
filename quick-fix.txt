@@ -1,0 +1,14 @@
+# Quick Fix Commands for Railway
+
+# Run these commands in Git Bash to deploy the fixes:
+
+git add .
+git commit -m "Fix Railway production deployment - disable reload and optimize for production"
+git push origin main
+
+# After pushing, Railway will automatically redeploy with the fixes
+# The new deployment will:
+# - Use production mode (no reloader)
+# - Use Railway's PORT environment variable
+# - Have proper health checks
+# - Work correctly in production
