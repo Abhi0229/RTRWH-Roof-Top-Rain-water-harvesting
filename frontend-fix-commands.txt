@@ -1,0 +1,20 @@
+# Frontend Fix Commands
+
+# 1. Commit the API URL fixes
+git add .
+git commit -m "Fix frontend API URLs to connect to Railway backend in production"
+git push origin main
+
+# 2. Deploy frontend to Vercel (recommended)
+cd frontend
+npm install -g vercel
+vercel --prod
+
+# OR deploy to Netlify
+npm install -g netlify-cli
+npm run build
+netlify deploy --prod --dir=build
+
+# Your frontend will then be available at:
+# - Vercel: https://your-app-name.vercel.app
+# - Netlify: https://your-app-name.netlify.app

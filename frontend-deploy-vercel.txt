@@ -1,0 +1,19 @@
+# Deploy Frontend to Vercel
+
+# 1. Install Vercel CLI
+npm install -g vercel
+
+# 2. Go to frontend directory
+cd frontend
+
+# 3. Update API base URL for production
+# Edit src/App.js or create .env file with:
+# REACT_APP_API_URL=https://rtrwh-roof-top-rain-water-harvesting-production.up.railway.app
+
+# 4. Deploy to Vercel
+vercel --prod
+
+# Follow the prompts:
+# - Framework: Create React App
+# - Build Command: npm run build
+# - Output Directory: build

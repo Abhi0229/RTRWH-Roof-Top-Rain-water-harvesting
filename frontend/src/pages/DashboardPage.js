@@ -9,7 +9,8 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/stats');
+        const apiUrl = process.env.REACT_APP_API_URL || '';
+        const response = await axios.get(`${apiUrl}/api/stats`);
         setStats(response.data);
       } catch (error) {
         console.error("Failed to fetch stats:", error);

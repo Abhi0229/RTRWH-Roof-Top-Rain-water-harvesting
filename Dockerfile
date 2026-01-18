@@ -1,4 +1,14 @@
-# Simple Python backend for Railway
+# Full-stack Railway deployment for RTRWH
+FROM node:18-alpine AS frontend-build
+
+# Build frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci --only=production
+COPY frontend/ ./
+RUN npm run build
+
+# Python backend stage
 FROM python:3.11-slim
 
 # Set working directory
@@ -9,12 +19,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Install Python dependencies
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY backend/ ./
+
+# Copy built frontend to static directory
+COPY --from=frontend-build /app/frontend/build ./static
 
 # Create database directory
 RUN mkdir -p /app/data

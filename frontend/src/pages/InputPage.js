@@ -180,7 +180,8 @@ const InputPage = () => {
     };
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/assess', inputData);
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await axios.post(`${apiUrl}/api/assess`, inputData);
       navigate('/results', { state: { ...response.data, input: inputData } });
     } catch (error) {
       console.error('Assessment failed:', error);

@@ -1,16 +1,23 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import requests
 import database
 from schemas import AssessmentInput, AssessmentResult
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="RTRWH Backend API", version="1.0.0")
+
+# Serve static files (React frontend) in production
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Allow CORS for frontend
 app.add_middleware(
@@ -30,8 +37,8 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
 
-@app.get("/")
-def read_root():
+@app.get("/api")
+def api_root():
     return {
         "message": "RTRWH Assessment API - Production", 
         "status": "online",
@@ -42,7 +49,7 @@ def read_root():
 def health_check():
     return {"status": "healthy", "service": "RTRWH API", "timestamp": "2026-01-18"}
 
-@app.post("/assess", response_model=AssessmentResult)
+@app.post("/api/assess", response_model=AssessmentResult)
 async def assess_rooftop(data: AssessmentInput):
     try:
         logger.info(f"Processing assessment for roof area: {data.roof_area}")
@@ -129,10 +136,25 @@ async def assess_rooftop(data: AssessmentInput):
         logger.error(f"Assessment error: {e}")
         raise HTTPException(status_code=500, detail=f"Assessment failed: {str(e)}")
 
-@app.get("/stats")
+@app.get("/api/stats")
 def get_statistics():
     try:
         return database.get_stats()
     except Exception as e:
         logger.error(f"Stats error: {e}")
         return {"total_assessments": 0, "total_litres": 0}
+
+# Serve React frontend for all other routes
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if os.path.exists("static"):
+        # If it's a file request, serve it directly
+        if "." in full_path and not full_path.startswith("api"):
+            file_path = f"static/{full_path}"
+            if os.path.exists(file_path):
+                return FileResponse(file_path)
+        
+        # For all other routes (including root), serve index.html for React routing
+        return FileResponse("static/index.html")
+    
+    return {"message": "Frontend not available"}
