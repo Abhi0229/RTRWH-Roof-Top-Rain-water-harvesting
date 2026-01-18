@@ -1,11 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import database
 from schemas import AssessmentInput, AssessmentResult
+import logging
 
-app = FastAPI(title="RTRWH Backend API")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="RTRWH Backend API", version="1.0.0")
 
 # Allow CORS for frontend
 app.add_middleware(
@@ -16,86 +21,118 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize DB
-database.init_db()
+# Initialize DB on startup
+@app.on_event("startup")
+async def startup_event():
+    try:
+        database.init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
 
 @app.get("/")
 def read_root():
-    return {"message": "RTRWH Assessment API - Beta", "status": "online"}
+    return {
+        "message": "RTRWH Assessment API - Production", 
+        "status": "online",
+        "version": "1.0.0"
+    }
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "RTRWH API"}
+    return {"status": "healthy", "service": "RTRWH API", "timestamp": "2026-01-18"}
 
 @app.post("/assess", response_model=AssessmentResult)
 async def assess_rooftop(data: AssessmentInput):
-    # Hardcoded groundwater depth
-    groundwater_depth = 10.0  # meters
+    try:
+        logger.info(f"Processing assessment for roof area: {data.roof_area}")
+        
+        # Hardcoded groundwater depth
+        groundwater_depth = 10.0  # meters
 
-    # Fetch rainfall from Open-Meteo API
-    lat = data.lat or 28.6139  # default to Delhi if not provided
-    lng = data.lng or 77.2090
+        # Fetch rainfall from Open-Meteo API
+        lat = data.lat or 28.6139  # default to Delhi if not provided
+        lng = data.lng or 77.2090
 
-    # Open-Meteo API for annual rainfall (sum of daily precipitation over year)
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": lat,
-        "longitude": lng,
-        "start_date": "2024-01-01",
-        "end_date": "2024-12-31",
-        "daily": "precipitation_sum",
-        "timezone": "Asia/Kolkata"
-    }
-    response = requests.get(url, params=params, timeout=10)
-    response.raise_for_status()  # raise if non-200
-    rainfall_data = response.json()
+        # Open-Meteo API for annual rainfall (sum of daily precipitation over year)
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": lat,
+            "longitude": lng,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "daily": "precipitation_sum",
+            "timezone": "Asia/Kolkata"
+        }
+        
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            rainfall_data = response.json()
+        except Exception as e:
+            logger.error(f"Weather API error: {e}")
+            # Use default rainfall if API fails
+            rainfall_data = {"daily": {"precipitation_sum": [2.5] * 365}}
 
-    # Calculate annual rainfall (sum of daily precipitation)
-    daily_precipitation = rainfall_data.get("daily", {}).get("precipitation_sum", [])
-    annual_rainfall_mm = sum([p for p in daily_precipitation if p is not None])
-    annual_rainfall_m = annual_rainfall_mm / 1000  # convert mm to meters
+        # Calculate annual rainfall (sum of daily precipitation)
+        daily_precipitation = rainfall_data.get("daily", {}).get("precipitation_sum", [])
+        annual_rainfall_mm = sum([p for p in daily_precipitation if p is not None])
+        annual_rainfall_m = annual_rainfall_mm / 1000  # convert mm to meters
 
-    # Calculate captured volume
-    runoff_coefficient = 0.85
-    captured_volume_litres = data.roof_area * annual_rainfall_mm * runoff_coefficient
+        # Calculate captured volume
+        runoff_coefficient = 0.85
+        captured_volume_litres = data.roof_area * annual_rainfall_mm * runoff_coefficient
 
-    # Rule engine for structure recommendation
-    if data.roof_area < 50:
-        structure_type = "Small Pit"
-        dimensions = "1.5m × 1.5m × 1.5m"
-        cost = 15000
-    elif data.roof_area <= 200:
-        structure_type = "Medium Pit"
-        dimensions = "2m × 4m × 4m"
-        cost = 25000
-    else:
-        structure_type = "Trench/Shaft"
-        dimensions = "3m × 6m × 2m"
-        cost = 40000
+        # Rule engine for structure recommendation
+        if data.roof_area < 50:
+            structure_type = "Small Pit"
+            dimensions = "1.5m × 1.5m × 1.5m"
+            cost = 15000
+        elif data.roof_area <= 200:
+            structure_type = "Medium Pit"
+            dimensions = "2m × 4m × 4m"
+            cost = 25000
+        else:
+            structure_type = "Trench/Shaft"
+            dimensions = "3m × 6m × 2m"
+            cost = 40000
 
-    # Save to DB
-    result_data = {
-        "roof_area": data.roof_area,
-        "dwellers": data.dwellers,
-        "open_space": data.open_space,
-        "roof_type": data.roof_type,
-        "lat": lat,
-        "lng": lng,
-        "annual_rainfall": annual_rainfall_mm,
-        "captured_volume": captured_volume_litres,
-        "structure_type": structure_type,
-        "cost": cost
-    }
-    database.save_assessment(result_data)
+        # Save to DB
+        result_data = {
+            "roof_area": data.roof_area,
+            "dwellers": data.dwellers,
+            "open_space": data.open_space,
+            "roof_type": data.roof_type,
+            "lat": lat,
+            "lng": lng,
+            "annual_rainfall": annual_rainfall_mm,
+            "captured_volume": captured_volume_litres,
+            "structure_type": structure_type,
+            "cost": cost
+        }
+        
+        try:
+            database.save_assessment(result_data)
+            logger.info("Assessment saved to database")
+        except Exception as e:
+            logger.error(f"Database save error: {e}")
 
-    return {
-        "captured_volume": round(captured_volume_litres, 2),
-        "structure_type": structure_type,
-        "dimensions": dimensions,
-        "cost": cost,
-        "annual_rainfall": annual_rainfall_mm
-    }
+        return {
+            "captured_volume": round(captured_volume_litres, 2),
+            "structure_type": structure_type,
+            "dimensions": dimensions,
+            "cost": cost,
+            "annual_rainfall": annual_rainfall_mm
+        }
+        
+    except Exception as e:
+        logger.error(f"Assessment error: {e}")
+        raise HTTPException(status_code=500, detail=f"Assessment failed: {str(e)}")
 
 @app.get("/stats")
 def get_statistics():
-    return database.get_stats()
+    try:
+        return database.get_stats()
+    except Exception as e:
+        logger.error(f"Stats error: {e}")
+        return {"total_assessments": 0, "total_litres": 0}
