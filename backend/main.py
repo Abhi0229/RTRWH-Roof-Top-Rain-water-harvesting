@@ -15,10 +15,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="RTRWH Backend API", version="1.0.0")
 
-# Serve static files (React frontend) in production
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # Allow CORS for frontend
 app.add_middleware(
     CORSMiddleware,
@@ -34,9 +30,19 @@ async def startup_event():
     try:
         database.init_db()
         logger.info("Database initialized successfully")
+        # Log static directory status
+        if os.path.exists("static"):
+            logger.info("Static directory found")
+            if os.path.exists("static/index.html"):
+                logger.info("index.html found in static directory")
+            else:
+                logger.error("index.html NOT found in static directory")
+        else:
+            logger.error("Static directory NOT found")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
 
+# API Routes
 @app.get("/api")
 def api_root():
     return {
@@ -144,30 +150,11 @@ def get_statistics():
         logger.error(f"Stats error: {e}")
         return {"total_assessments": 0, "total_litres": 0}
 
-# Serve React frontend for all other routes
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    # Don't serve frontend for API routes
-    if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("health"):
-        return {"error": "Not found"}
-    
-    if os.path.exists("static"):
-        # If it's a static file request (has extension), serve it directly
-        if "." in full_path:
-            file_path = f"static/{full_path}"
-            if os.path.exists(file_path):
-                return FileResponse(file_path)
-        
-        # For all other routes (React routing), serve index.html
-        index_path = "static/index.html"
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        else:
-            return {"error": "Frontend not built", "message": "static/index.html not found"}
-    
-    return {"error": "Static directory not found", "message": "Frontend not available"}
+# Mount static files for CSS, JS, images
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Root route specifically for React app
+# Root route - serve React app
 @app.get("/")
 async def serve_root():
     if os.path.exists("static/index.html"):
@@ -177,6 +164,19 @@ async def serve_root():
             "message": "RTRWH Assessment API - Production", 
             "status": "online",
             "version": "1.0.0",
-            "frontend": "not available",
+            "frontend": "not available - static/index.html not found",
             "api_docs": "/docs"
         }
+
+# Catch-all route for React Router (must be last)
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # Don't serve SPA for API routes
+    if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("health"):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # For React Router, always serve index.html
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    else:
+        raise HTTPException(status_code=404, detail="Frontend not available")
